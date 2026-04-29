@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="km">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>កម្មវិធីបង្កើតវិកយប័ត្រផ្ទះជួល</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;700&family=Moul&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kantumruy Pro', sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        .khmer-moul {
+            font-family: 'Moul', cursive;
+        }
+
+        /* កំណត់ទម្រង់សន្លឹក A4 */
+        .print-area {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm 15mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            color: #1f2937;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* បង្ហាញលើទូរស័ព្ទ (Preview Only) */
+        @media (max-width: 768px) {
+            .preview-container {
+                overflow-x: auto;
+                padding: 10px;
+                background: #4b5563;
+            }
+
+            #invoice-preview {
+                transform: scale(0.38);
+                transform-origin: top left;
+                margin-bottom: -185mm;
+            }
+        }
+
+        /* ច្បាប់ពិសេសសម្រាប់ការបោះពុម្ព */
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+
+            body {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .preview-container {
+                padding: 0 !important;
+                background: white !important;
+                overflow: visible !important;
+            }
+
+            #invoice-preview {
+                position: static !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                margin: 0 !important;
+                /* Remove margin for print */
+                padding: 10mm 15mm !important;
+                /* Adjust padding for print */
+                box-shadow: none !important;
+                border: none !important;
+                transform: none !important;
+                display: flex !important;
+                visibility: visible !important;
+            }
+
+            #invoice-preview * {
+                visibility: visible !important;
+            }
+
+            tr {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            outline: none;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.1);
+        }
+
+        th,
+        td {
+            font-size: 1rem !important;
+            padding: 10px !important;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200">
+
+    <div class="max-w-[1500px] mx-auto flex flex-col lg:flex-row min-h-screen">
+
+        <!-- កន្លែងបញ្ចូលទិន្នន័យ -->
+        <div class="w-full lg:w-[420px] bg-white p-6 no-print lg:overflow-y-auto lg:h-screen shadow-2xl border-r z-20">
+            <div class="mb-6 border-b-2 border-blue-50 pb-4 text-center">
+                <h2 class="text-2xl font-black text-blue-800">ការកំណត់វិកយប័ត្រ</h2>
+                <p class="text-sm text-gray-500">បញ្ចូលទិន្នន័យខាងក្រោម</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="input-group">
+                    <label>ឈ្មោះម្ចាស់ផ្ទះ</label>
+                    <input type="text" id="in_owner" value="ផ្ទះជួល សុភមង្គល" oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>ទីតាំងផ្ទះជួល</label>
+                    <input type="text" id="in_address" value="ភូមិដំណាក់ធំ សង្កាត់មានជ័យ១ ខណ្ឌមានជ័យ រាជធានីភ្នំពេញ"
+                        oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>លេខទូរស័ព្ទ</label>
+                    <input type="text" id="in_phone" value="012 345 678" oninput="updatePreview()">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label>ឈ្មោះអ្នកជួល</label>
+                        <input type="text" id="in_tenant" placeholder="ឈ្មោះ" oninput="updatePreview()">
+                    </div>
+                    <div class="input-group">
+                        <label>លេខបន្ទប់</label>
+                        <input type="text" id="in_room" placeholder="A01" oninput="updatePreview()">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label>ថ្ងៃខែឆ្នាំ</label>
+                        <input type="date" id="in_date" oninput="updatePreview()">
+                    </div>
+                    <div class="input-group">
+                        <label>ថ្លៃផ្ទះ ($)</label>
+                        <input type="number" id="in_rent" value="55" oninput="updatePreview()">
+                    </div>
+                </div>
+
+                <div class="p-4 bg-orange-50 rounded-xl border-2 border-orange-100">
+                    <p class="text-sm font-black text-orange-800 mb-2 flex items-center gap-2">
+                        <span class="w-2 h-4 bg-orange-500 rounded"></span> ⚡ អគ្គិសនី (kW)
+                    </p>
+                    <div class="grid grid-cols-3 gap-2 input-group">
+                        <input type="number" id="in_elec_old" placeholder="ចាស់" oninput="updatePreview()"
+                            class="w-full p-2 border rounded-lg text-center font-bold">
+                        <input type="number" id="in_elec_new" placeholder="ថ្មី" oninput="updatePreview()"
+                            class="w-full p-2 border rounded-lg text-center font-bold">
+                        <input type="number" id="in_elec_price" value="1000" oninput="updatePreview()"
+                            class="w-full p-2 border rounded-lg text-center text-blue-600 font-bold">
+                    </div>
+                </div>
+
+                <div class="p-4 bg-blue-50 rounded-xl border-2 border-blue-100">
+                    <p class="text-sm font-black text-blue-800 mb-2 flex items-center gap-2">
+                        <span class="w-2 h-4 bg-blue-500 rounded"></span> 💧 ទឹកស្អាត (m³)
+                    </p>
+                    <div class="grid grid-cols-3 gap-2 input-group">
+                        <input type="number" id="in_water_old" placeholder="ចាស់" oninput="updatePreview()"
+                            class="w-full p-2 border rounded-lg text-center font-bold">
+                        <input type="number" id="in_water_new" placeholder="ថ្មី" oninput="updatePreview()"
+                            class="w-full p-2 border rounded-lg text-center font-bold">
+                        <input type="number" id="in_water_price" value="2000" oninput="updatePreview()"
+                            class="w-full p-2 border rounded-lg text-center text-blue-600 font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label>សេវាផ្សេងៗ (៛)</label>
+                        <input type="number" id="in_other" value="0" oninput="updatePreview()">
+                    </div>
+                    <div class="input-group">
+                        <label>អត្រា (1$=?៛)</label>
+                        <input type="number" id="in_rate" value="4100" oninput="updatePreview()">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>រូបភាព QR Code បង់ប្រាក់ (ABA/Wing...)</label>
+                    <input type="file" id="in_qr" accept="image/*" onchange="handleQRUpload(event)" class="text-sm">
+                    <div class="flex items-center gap-2 mt-2">
+                        <input type="checkbox" id="show_qr" checked onchange="updatePreview()"
+                            class="w-4 h-4 cursor-pointer accent-blue-600">
+                        <label for="show_qr" class="text-xs font-bold text-gray-600 cursor-pointer">បង្ហាញ QR Code
+                            លើវិកយប័ត្រ</label>
+                    </div>
+                </div>
+
+                <button onclick="window.print()"
+                    class="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-3 mt-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    បោះពុម្ពវិកយប័ត្រ (A4)
+                </button>
+            </div>
+        </div>
+
+        <!-- ផ្ទៃ Preview -->
+        <div class="flex-1 preview-container overflow-y-auto bg-gray-600 p-4">
+            <div class="print-area" id="invoice-preview">
+                <div class="relative mb-6">
+                    <!-- QR Code (Left) -->
+                    <div id="qr_container" class="hidden absolute left-0 top-0 flex flex-col items-center">
+                        <img id="out_qr" src=""
+                            class="w-32 h-32 border-2 border-gray-200 rounded-xl p-1 bg-white mb-2 object-contain">
+                        <p class="text-[10px] font-bold text-gray-500 italic">ស្កេនដើម្បីបង់ប្រាក់</p>
+                    </div>
+                    <!-- Header Text -->
+                    <div class="text-center w-full min-h-[150px]">
+                        <h1 class="khmer-moul text-4xl text-blue-900 mb-1" id="out_owner">ផ្ទះជួល សុភមង្គល</h1>
+                        <p class="text-gray-600 font-bold text-sm mb-4" id="out_address">ភូមិដំណាក់ធំ សង្កាត់មានជ័យ១
+                            ខណ្ឌមានជ័យ រាជធានីភ្នំពេញ</p>
+                        <div class="inline-block">
+                            <div
+                                class="bg-blue-900 text-white px-10 py-2 rounded-lg text-lg font-black uppercase tracking-widest">
+                                វិកយប័ត្របង់ប្រាក់</div>
+                        </div>
+                        <p class="text-xl mt-3 font-bold">លេខទូរស័ព្ទ៖ <span id="out_phone" class="text-blue-700">012
+                                345
+                                678</span></p>
+                    </div>
+                </div>
+
+                <!-- Tenant Info Grid -->
+                <div class="grid grid-cols-2 gap-8 mb-6 bg-gray-50 p-6 rounded-2xl border-2 border-gray-100">
+                    <div class="space-y-3">
+                        <p class="text-xl flex items-center gap-3">
+                            <span class="font-black text-gray-400 whitespace-nowrap">អ្នកជួល៖</span>
+                            <span id="out_tenant"
+                                class="font-black text-gray-800 border-b-2 border-blue-200 flex-1">...................</span>
+                        </p>
+                        <p class="text-2xl flex items-center gap-3">
+                            <span class="font-black text-gray-400 whitespace-nowrap">លេខបន្ទប់៖</span>
+                            <span id="out_room"
+                                class="font-black text-red-600 bg-red-50 px-4 py-1 rounded-lg">...</span>
+                        </p>
+                    </div>
+                    <div class="text-right space-y-3">
+                        <p class="text-xl"><strong>ថ្ងៃទី៖</strong> <span id="out_date"
+                                class="font-bold">.../.../...</span></p>
+                        <p class="text-sm text-gray-400">លេខរៀង៖ <span
+                                class="font-mono font-bold text-gray-600">#INV-2024-001</span></p>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-hidden rounded-xl border-2 border-blue-900 mb-6">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-blue-900 text-white">
+                                <th class="border border-blue-900 p-3 text-left">បរិយាយសេវាកម្ម</th>
+                                <th class="border border-blue-900 p-3 text-center">លេខចាស់</th>
+                                <th class="border border-blue-900 p-3 text-center">លេខថ្មី</th>
+                                <th class="border border-blue-900 p-3 text-center">ប្រើប្រាស់</th>
+                                <th class="border border-blue-900 p-3 text-center">តម្លៃ/ឯកតា</th>
+                                <th class="border border-blue-900 p-3 text-right">សរុបប្រាក់</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table_body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Summary -->
+                <div class="flex justify-end items-end mb-10 px-4">
+
+                    <div class="w-[380px] bg-blue-900 text-white p-6 rounded-3xl shadow-2xl relative">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center border-b border-blue-700 pb-2">
+                                <span class="text-lg opacity-80">សរុបជារៀល៖</span>
+                                <span class="text-2xl font-black" id="final_riels">0 ៛</span>
+                            </div>
+                            <div class="flex justify-between items-end pt-2">
+                                <span class="text-xl font-black">សរុបជាដុល្លារ</span>
+                                <span class="text-5xl font-black text-yellow-400" id="final_dollars">$0.00</span>
+                            </div>
+                            <div class="text-[11px] text-blue-300 text-right mt-2 italic">
+                                អត្រាប្តូរប្រាក់៖ 1$ = <span id="out_rate" class="font-bold">4100</span>៛
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Signatures -->
+                <div class="grid grid-cols-2 text-center mt-auto pb-6">
+                    <div class="px-10">
+                        <div class="h-px bg-gray-200 mb-4"></div>
+                        <p class="font-black text-xl text-gray-800 uppercase">ហត្ថលេខាអ្នកជួល</p>
+                        <div class="h-20"></div>
+                        <p class="text-gray-400 italic">ឈ្មោះ៖ ...................................</p>
+                    </div>
+                    <div class="px-10">
+                        <div class="h-px bg-gray-200 mb-4"></div>
+                        <p class="font-black text-xl text-gray-800 uppercase">ហត្ថលេខាម្ចាស់ផ្ទះ</p>
+                        <div class="h-20"></div>
+                        <p class="text-gray-400 italic">ឈ្មោះ៖ ...................................</p>
+                    </div>
+                </div>
+
+                <div class="text-center text-[10px] text-gray-300 uppercase tracking-widest pb-2">
+                    --- សូមអរគុណដែលបានប្រើប្រាស់សេវាកម្មរបស់យើងខ្ញុំ ---
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updatePreview() {
+            const owner = document.getElementById('in_owner').value;
+            const address = document.getElementById('in_address').value;
+            const phone = document.getElementById('in_phone').value;
+            const tenant = document.getElementById('in_tenant').value || '...................';
+            const room = document.getElementById('in_room').value || '...';
+            const dateStr = document.getElementById('in_date').value;
+            const rent = parseFloat(document.getElementById('in_rent').value) || 0;
+            const rate = parseFloat(document.getElementById('in_rate').value) || 4100;
+
+            const eOld = parseFloat(document.getElementById('in_elec_old').value) || 0;
+            const eNew = parseFloat(document.getElementById('in_elec_new').value) || 0;
+            const ePrice = parseFloat(document.getElementById('in_elec_price').value) || 0;
+
+            const wOld = parseFloat(document.getElementById('in_water_old').value) || 0;
+            const wNew = parseFloat(document.getElementById('in_water_new').value) || 0;
+            const wPrice = parseFloat(document.getElementById('in_water_price').value) || 0;
+            const other = parseFloat(document.getElementById('in_other').value) || 0;
+
+            const eUse = Math.max(0, eNew - eOld);
+            const eTotal = eUse * ePrice;
+            const wUse = Math.max(0, wNew - wOld);
+            const wTotal = wUse * wPrice;
+            const totalRiel = (rent * rate) + eTotal + wTotal + other;
+            const totalDollar = totalRiel / rate;
+
+            document.getElementById('out_owner').innerText = owner;
+            document.getElementById('out_address').innerText = address;
+            document.getElementById('out_phone').innerText = phone;
+            document.getElementById('out_tenant').innerText = tenant;
+            document.getElementById('out_room').innerText = room;
+            document.getElementById('out_rate').innerText = rate.toLocaleString();
+            document.getElementById('out_date').innerText = dateStr ? new Date(dateStr).toLocaleDateString('km-KH') : '.../.../...';
+
+            // បង្ហាញ ឬលាក់ QR Code
+            const showQR = document.getElementById('show_qr').checked;
+            const qrImg = document.getElementById('out_qr');
+            const qrContainer = document.getElementById('qr_container');
+            if (showQR && qrImg.getAttribute('src')) {
+                qrContainer.classList.remove('hidden');
+            } else {
+                qrContainer.classList.add('hidden');
+            }
+
+            const tableBody = document.getElementById('table_body');
+            tableBody.innerHTML = `
+                <tr style="background-color: white !important;">
+                    <td class="border border-gray-200 font-black">ថ្លៃឈ្នួលផ្ទះ (Rent)</td>
+                    <td class="border border-gray-200 text-center text-gray-300">-</td>
+                    <td class="border border-gray-200 text-center text-gray-300">-</td>
+                    <td class="border border-gray-200 text-center font-bold">1 ខែ</td>
+                    <td class="border border-gray-200 text-center font-bold text-blue-600">$${rent.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td class="border border-gray-200 text-right font-black text-blue-900">$${rent.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                </tr>
+                <tr style="background-color: #fffaf0 !important;">
+                    <td class="border border-gray-200 font-black">ប្រើប្រាស់ភ្លើង (Electricity)</td>
+                    <td class="border border-gray-200 text-center font-bold text-gray-500">${eOld.toLocaleString()}</td>
+                    <td class="border border-gray-200 text-center font-bold text-gray-500">${eNew.toLocaleString()}</td>
+                    <td class="border border-gray-200 text-center font-black text-orange-600 underline">${eUse.toLocaleString()}</td>
+                    <td class="border border-gray-200 text-center font-bold">${ePrice.toLocaleString()} ៛</td>
+                    <td class="border border-gray-200 text-right font-black">${eTotal.toLocaleString()} ៛</td>
+                </tr>
+                <tr style="background-color: #f0f9ff !important;">
+                    <td class="border border-gray-200 font-black">ប្រើប្រាស់ទឹក (Water)</td>
+                    <td class="border border-gray-200 text-center font-bold text-gray-500">${wOld.toLocaleString()}</td>
+                    <td class="border border-gray-200 text-center font-bold text-gray-500">${wNew.toLocaleString()}</td>
+                    <td class="border border-gray-200 text-center font-black text-blue-600 underline">${wUse.toLocaleString()}</td>
+                    <td class="border border-gray-200 text-center font-bold">${wPrice.toLocaleString()} ៛</td>
+                    <td class="border border-gray-200 text-right font-black">${wTotal.toLocaleString()} ៛</td>
+                </tr>
+                <tr style="background-color: white !important;">
+                    <td class="border border-gray-200 font-black">សេវាផ្សេងៗ (Others)</td>
+                    <td class="border border-gray-200 text-center text-gray-300">-</td>
+                    <td class="border border-gray-200 text-center text-gray-300">-</td>
+                    <td class="border border-gray-200 text-center text-gray-200">-</td>
+                    <td class="border border-gray-200 text-center text-gray-200">-</td>
+                    <td class="border border-gray-200 text-right font-black">${other.toLocaleString()} ៛</td>
+                </tr>
+            `;
+
+            document.getElementById('final_riels').innerText = totalRiel.toLocaleString() + ' ៛';
+            document.getElementById('final_dollars').innerText = '$' + totalDollar.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // កំណត់ឈ្មោះ File PDF ពេល Save (ប្រើ Title របស់ Browser)
+            const fileNameTenant = document.getElementById('in_tenant').value.trim() || "អ្នកជួល";
+            const fileNameRoom = document.getElementById('in_room').value.trim() || "គ្មានលេខ";
+            const fileNameDate = dateStr || "គ្មានកាលបរិច្ឆេទ";
+            document.title = `វិកយប័ត្រ_${fileNameTenant}_បន្ទប់_${fileNameRoom}_${fileNameDate}`;
+        }
+
+        function handleQRUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('out_qr').src = e.target.result;
+                    document.getElementById('show_qr').checked = true; // បើក checkbox ស្វ័យប្រវត្តិពេល upload
+                    updatePreview();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        window.onload = function () {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('in_date').value = today;
+            updatePreview();
+
+            // ចុះឈ្មោះ Service Worker សម្រាប់ប្រើ Offline
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then(() => console.log('Service Worker Registered'))
+                    .catch(err => console.log('Service Worker Failed', err));
+            }
+        }
+    </script>
+</body>
+
+</html>
