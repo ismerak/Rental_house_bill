@@ -219,12 +219,15 @@
                 <div class="input-group">
                     <label>រូបភាព QR Code បង់ប្រាក់ (ABA/Wing...)</label>
                     <input type="file" id="in_qr" accept="image/*" onchange="handleQRUpload(event)" class="text-sm">
-                    <div class="flex items-center gap-2 mt-2">
-                        <input type="checkbox" id="show_qr" checked onchange="updatePreview()"
-                            class="w-4 h-4 cursor-pointer accent-blue-600">
-                        <label for="show_qr" class="text-xs font-bold text-gray-600 cursor-pointer">បង្ហាញ QR Code
-                            លើវិកយប័ត្រ</label>
-                    </div>
+                    <button id="btn_remove_qr" onclick="removeQR()"
+                        class="hidden mt-2 text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        លុបរូបភាពចេញ
+                    </button>
                 </div>
 
                 <button onclick="window.print()"
@@ -383,10 +386,9 @@
             document.getElementById('out_date').innerText = dateStr ? new Date(dateStr).toLocaleDateString('km-KH') : '.../.../...';
 
             // បង្ហាញ ឬលាក់ QR Code
-            const showQR = document.getElementById('show_qr').checked;
             const qrImg = document.getElementById('out_qr');
             const qrContainer = document.getElementById('qr_container');
-            if (showQR && qrImg.getAttribute('src')) {
+            if (qrImg.getAttribute('src')) {
                 qrContainer.classList.remove('hidden');
             } else {
                 qrContainer.classList.add('hidden');
@@ -444,11 +446,18 @@
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     document.getElementById('out_qr').src = e.target.result;
-                    document.getElementById('show_qr').checked = true; // បើក checkbox ស្វ័យប្រវត្តិពេល upload
+                    document.getElementById('btn_remove_qr').classList.remove('hidden');
                     updatePreview();
                 }
                 reader.readAsDataURL(file);
             }
+        }
+
+        function removeQR() {
+            document.getElementById('in_qr').value = ""; // Clear input file
+            document.getElementById('out_qr').removeAttribute('src'); // Remove image source
+            document.getElementById('btn_remove_qr').classList.add('hidden'); // Hide remove button
+            updatePreview();
         }
 
         window.onload = function () {
